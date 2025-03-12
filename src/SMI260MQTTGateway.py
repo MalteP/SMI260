@@ -35,7 +35,6 @@ def on_connect(client, userdata, flags, rc):
 
     if rc == 0:
         print("Successfully connected to MQTT")
-        mqtt_client.connected_flag=True
 
         for device in smi_list:
             userdata.device_list[device] = {"Energy": None, "Power": None, "MaxPower": None, "PowerOn": None}
@@ -46,7 +45,6 @@ def on_connect(client, userdata, flags, rc):
 
 def on_disconnect(client, userdata, rc):
     print("disconnecting reason  "  +str(rc))
-    mqtt_client.connected_flag=True
 
 
 def on_message(client, userdata, msg):
@@ -216,7 +214,6 @@ async def mqtt_task(async_state):
     print('MQTT Connecting to ' + mqtt_server + ':' + str(mqtt_port))
     mqtt_client.user_data_set(async_state)
     mqtt_client.username_pw_set(mqtt_user, mqtt_pass)
-    mqtt_client.connected_flag=False
     mqtt_client.on_connect = on_connect
     mqtt_client.on_message = on_message
     mqtt_client.on_disconnect = on_disconnect
