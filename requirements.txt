@@ -3,3 +3,4 @@ py_flags==1.1.4
 pycryptodome==3.21.0
 paho_mqtt==2.1.0
 pyserial==3.5
+retry==0.9.2

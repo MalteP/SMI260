@@ -4,6 +4,7 @@ import copy
 import datetime
 import serial_asyncio
 import paho.mqtt.client as mqtt
+from retry import retry
 from IM871 import IM871, EndpointID, RadioLinkMessageIdentifier
 from SMI260Commands import SMI260Commands
 from wmbus import WMBusFrame
@@ -30,6 +31,10 @@ def parse_mqtt_message(message):
     value = message.payload
     return address, command, value
 
+
+@retry(Exception, tries=3, delay=30)
+def connect_mqtt(mqtt_server, mqtt_port, timeout):
+    mqtt_client.connect(mqtt_server, mqtt_port, timeout)
 
 def on_connect(client, userdata, flags, rc):
 
@@ -206,22 +211,6 @@ class Communication(asyncio.Protocol):
         print(self.transport.get_write_buffer_size())
         print('resume writing')
 
-async def mqtt_task(async_state):
-    mqtt_server = os.getenv('MQTTSERVER', '127.0.0.1')
-    mqtt_port = int(os.getenv('MQTTSERVERPORT', 1883))
-    mqtt_user = os.getenv('MQTTSERVERUSER', '')
-    mqtt_pass = os.getenv('MQTTSERVERPASS', None)
-    print('MQTT Connecting to ' + mqtt_server + ':' + str(mqtt_port))
-    mqtt_client.user_data_set(async_state)
-    mqtt_client.username_pw_set(mqtt_user, mqtt_pass)
-    mqtt_client.on_connect = on_connect
-    mqtt_client.on_message = on_message
-    mqtt_client.on_disconnect = on_disconnect
-    mqtt_client.connect(mqtt_server, mqtt_port, 30)
-    mqtt_client.loop_start()
-    while True:
-        await asyncio.sleep(1.0)
-
 
 def main():
     global mqtt_common_topic, smi_list, debug
@@ -238,7 +227,22 @@ def main():
     async_state.transport = None
     async_state.poll_every = poll_every
 
-    loop = asyncio.get_event_loop()
+    # setup mqtt
+    mqtt_server = os.getenv('MQTTSERVER', '127.0.0.1')
+    mqtt_port = int(os.getenv('MQTTSERVERPORT', 1883))
+    mqtt_user = os.getenv('MQTTSERVERUSER', '')
+    mqtt_pass = os.getenv('MQTTSERVERPASS', None)
+    print('MQTT Connecting to ' + mqtt_server + ':' + str(mqtt_port))
+    mqtt_client.user_data_set(async_state)
+    mqtt_client.username_pw_set(mqtt_user, mqtt_pass)
+    mqtt_client.on_connect = on_connect
+    mqtt_client.on_message = on_message
+    mqtt_client.on_disconnect = on_disconnect
+    connect_mqtt(mqtt_server, mqtt_port, 30)
+    mqtt_client.loop_start()
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     # setup serial connection
     protocol = partial(Communication, async_state)
@@ -246,9 +250,6 @@ def main():
     asyncio.ensure_future(transport)
 
     async_state.transport = transport
-
-    # setup mqtt
-    loop.create_task(mqtt_task(async_state))
 
     loop.run_forever()
   
