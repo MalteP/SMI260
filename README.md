@@ -23,7 +23,7 @@ SMI/<last 4 digits of inverter serial>/  | TemperatureDCDC | temperature of the 
 
 To setup install all dependencies: `pip3 install -r requirements.txt` 
 
-and then run it with  `python3.7 ./SMI260MQTTGateway.py`
+and then run it with  `python3 ./SMI260MQTTGateway.py`
 
 ## Settings
 You can configure the gateway ether by editing SMI260MQTTGateway.py with your settings (settings are in the lower part of the file) or you can set environment variables:
